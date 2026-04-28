@@ -1,0 +1,32 @@
+// Room 
+Group gLabRoom "IoT Lab" <room> ["Room"]
+
+// Devices 
+Group gPhoneEq "Rod's Smartphone" <smartphone> (gLabRoom) ["Smartphone"]
+Group gWeatherEq "Weather Station" <sun_clouds> (gLabRoom) ["Sensor"]
+Group gAstroEq "Astro Data" <moon> (gLabRoom) ["Sensor"]
+Group gSwitches "Lab Controls" <energy> (gLabRoom) ["WallSwitch"]
+
+// Phone 
+Switch RodMobile "Phone Presence [%s]" <network> (gPhoneEq) ["Status", "Presence"] { channel="network:pingdevice:RodMobile:online" }
+
+// Virtual switch
+Switch Virtual_Lab_Switch "Lab Switch" <switch> (gSwitches) ["Switch"]
+
+// Telegram Listener 
+String Telegram_Last_Message "Telegram Message" (gSwitches) ["Status"] { channel="telegram:telegramBot:TELEGRAM_BOT:lastMessageText" }
+
+// Weather Data
+Number:Temperature Local_Temperature "Outside Temp [%.1f %unit%]" <temperature> (gWeatherEq) ["Measurement", "Temperature"] { channel="openweathermap:weather-and-forecast:OWM_API:OWM_FORECAST:current#temperature" }
+Number:Dimensionless Local_Humidity "Outside Humidity [%d %%]" <humidity> (gWeatherEq) ["Measurement", "Humidity"] { channel="openweathermap:weather-and-forecast:OWM_API:OWM_FORECAST:current#humidity" }
+String Local_Condition "Weather Condition [%s]" <rain> (gWeatherEq) ["Status"] { channel="openweathermap:weather-and-forecast:OWM_API:OWM_FORECAST:current#condition" }
+
+// Astro Data
+DateTime Sunrise_Time "Sunrise Today [%1$tH:%1$tM]" <sunrise> (gAstroEq) ["Status"] { channel="astro:sun:ASTRO_SUN:rise#start" }
+DateTime Sunset_Time "Sunset Today [%1$tH:%1$tM]" <sunset> (gAstroEq) ["Status"] { channel="astro:sun:ASTRO_SUN:set#start" }
+String Moon_Phase "Moon Phase [%s]" <moon> (gAstroEq) ["Status"] { channel="astro:moon:ASTRO_MOON:phase#name" }
+
+// Calendar 
+Group gCalendarEq "Outlook Calendar" <calendar> (gLabRoom) ["Sensor"]
+Switch Calendar_Presence "In a Meeting [%s]" <presence> (gCalendarEq) ["Status", "Presence"] { channel="icalendar:calendar:ical_outlook:currentPresence" }
+String Calendar_Current_Event "Current Event [%s]" <text> (gCalendarEq) ["Status"] { channel="icalendar:calendar:ical_outlook:currentTitle" }

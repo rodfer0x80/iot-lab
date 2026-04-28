@@ -1,0 +1,60 @@
+rule "Presence Detection ON"
+when
+    Item RodMobile changed to ON
+then
+    logInfo("LabRule", "Admin has JOINED to the network.")
+
+    Virtual_Lab_Switch.sendCommand(ON)
+    logInfo("LabRule", "Network switch turned ON.")
+end 
+
+rule "Switch Toggled ON"
+when 
+    Item Virtual_Lab_Switch changed to ON 
+then
+    logInfo("LabRule", "Network switch toggle ON detected.")
+    getActions("mail","mail:smtp:OUTLOOK_MAIL").sendMail("rlfas1@iscte-iul.pt", "IoT Lab Alert", "Admin has JOINED the network.")
+    logInfo("LabRule", "Email sent successfully.")
+
+    getActions("telegram","telegram:telegramBot:TELEGRAM_BOT").sendTelegram(8705737110L, "Admin has JOINED the network.")
+    logInfo("LabRule", "Telegram message sent successfully.")
+end
+
+rule "Presence Detection OFF"
+when
+    Item RodMobile changed to OFF
+then
+    logInfo("LabRule", "Admin has LEFT the network.")
+
+    Virtual_Lab_Switch.sendCommand(OFF)
+    logInfo("LabRule", "Network switch turned OFF.")
+end
+
+rule "Switch Toggled OFF"
+when 
+    Item Virtual_Lab_Switch changed to OFF
+then 
+    logInfo("LabRule", "Network switch toggle OFF detected.")
+
+    getActions("mail","mail:smtp:OUTLOOK_MAIL").sendMail("rlfas1@iscte-iul.pt", "IoT Lab Alert", "Admin has LEFT the network.")
+    logInfo("LabRule", "Email sent successfully.")
+
+    getActions("telegram","telegram:telegramBot:TELEGRAM_BOT").sendTelegram(8705737110L, "Admin has LEFT the network.")
+    logInfo("LabRule", "Telegram message sent successfully.")
+end
+
+rule "Calendar Event Started"
+when
+    Item Calendar_Presence changed to ON
+then
+    val eventName = Calendar_Current_Event.state.toString
+    logInfo("LabRule", "Calendar event started: " + eventName)
+    
+end
+
+rule "Calendar Event Ended"
+when
+    Item Calendar_Presence changed to OFF
+then
+    logInfo("LabRule", "Calendar event ended: " + eventName)
+end

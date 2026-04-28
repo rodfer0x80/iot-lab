@@ -1,0 +1,19 @@
+sitemap lab label="ISCTE IoT Lab" {
+    
+    Frame label="Controls & Presence" {
+        Switch item=Virtual_Lab_Switch label="Lab Automation Switch"
+        Text item=RodMobile_Static label="Rod's Phone [%s]"
+    }
+    
+    Frame label="Weather & Environment" {
+        Text item=Local_Temperature label="Outside Temp [%.1f %unit%]"
+        Text item=Local_Humidity label="Humidity [%d %%]"
+        Text item=Local_Condition label="Condition [%s]"
+    }
+    
+    Frame label="Astro Data" {
+        Text item=Sunrise_Time
+        Text item=Sunset_Time
+        Text item=Moon_Phase
+    }
+}
