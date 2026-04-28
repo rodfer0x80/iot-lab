@@ -1,0 +1,18 @@
+// The Room Location
+Group gLabRoom "Laboratory" <room> ["Room"]
+
+// The Equipment Container
+Group gLabLights "Lab Lights Container" <light> (gLabRoom) ["Lightbulb"]
+
+// Master Switch (Inside the Container)
+Switch Lab_Master_Switch "Master Lab Switch" <switch> (gLabLights) ["Switch", "Power"] { channel="hue:room:ecb5fafffe067ba7:f611fdb8-b02a-4cc8-a89a-d035d690bcc4:brightness" }
+
+// White Lamp
+Switch White_Lamp_Power "White Lamp Power" <switch> (gLabLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
+Dimmer White_Lamp_Dimmer "White Brightness [%d %%]" <slider> (gLabLights) ["Control", "Light"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
+
+// Color Lamp
+Switch Color_Lamp_Power "Color Lamp Power" <switch> (gLabLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
+Dimmer Color_Lamp_Dimmer "Color Brightness [%d %%]" <slider> (gLabLights) ["Control", "Light"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
+Color Color_Lamp_Color "Lamp Color" <colorpicker> (gLabLights) ["Control", "Color"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
+Dimmer Color_Lamp_Temp "White Temperature" <heating> (gLabLights) ["Control", "ColorTemperature"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color-temperature" }
