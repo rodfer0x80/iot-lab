@@ -26,7 +26,10 @@ Dimmer PH_Color_Lamp_Temp "PH White Temperature" <heating> (gLabHueLights) ["Con
 
 // Philips Hue White Lamp & IKEA Lamp
 Switch PH_White_Lamp_Power "PH White Lamp Power" <switch> (gLabHueLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
+Dimmer PH_White_Lamp_Dimmer "PH White Lamp Brightness [%d %%]" <slider> (gLabHueLights) ["Control", "Light"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
+
 Switch White_Lamp_Power "White Lamp Power" <switch> (gLabIkeaLights) ["Switch", "Power"] { channel="deconz:dimmablelight:deconzGW:IKEA_LAMP:brightness" }
+Dimmer White_Lamp_Dimmer "White Lamp Brightness [%d %%]" <slider> (gLabIkeaLights) ["Control", "Light"] { channel="deconz:dimmablelight:deconzGW:IKEA_LAMP:brightness" }
 
 // =============================================================================
 // Custom Microcontrollers & Telemetry (ESP8266 + Sensors)

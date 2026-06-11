@@ -2,6 +2,7 @@
 // Global State & Threshold Definitions
 // =============================================================================
 var Timer alertTimer = null
+var Timer doorAlertTimer = null
 var String lastStableColor = "0,0,100" // Defaults to Warm White
 
 val Double HUMIDITY_LOW_LIMIT = 40.0
@@ -17,9 +18,9 @@ when
 then
     logInfo("LabAutomation", "Motion detected! Initiating high-priority visual alert.")
 
-    if (alertTimer === null) {
+    if (alertTimer === null && doorAlertTimer === null) {
         lastStableColor = PH_Color_Lamp_Color.state.toString
-    } else {
+    } else if (alertTimer !== null) {
         alertTimer.cancel()
         alertTimer = null
     }
@@ -50,11 +51,13 @@ then
     }
 
     if (targetColor != "") {
-        if (alertTimer === null) {
+        if (alertTimer === null && doorAlertTimer === null) {
             lastStableColor = PH_Color_Lamp_Color.state.toString
         } else {
-            alertTimer.cancel()
+            if (alertTimer !== null) alertTimer.cancel()
+            if (doorAlertTimer !== null) doorAlertTimer.cancel()
             alertTimer = null
+            doorAlertTimer = null
         }
 
         PH_Color_Lamp_Color.sendCommand(targetColor)
@@ -149,8 +152,26 @@ rule "Perimeter Door Activation Matrix"
 when
     Item Lab_Door_Sensor changed to OPEN
 then
-    logInfo("LabSecurity", "Perimeter breach detected at Main Door.")
+    logInfo("LabSecurity", "Perimeter breach detected at Main Door. Initiating green visual alert.")
     
+    // Handle state capture for the visual alert
+    if (doorAlertTimer === null && alertTimer === null) {
+        lastStableColor = PH_Color_Lamp_Color.state.toString
+    } else if (doorAlertTimer !== null) {
+        doorAlertTimer.cancel()
+        doorAlertTimer = null
+    }
+
+    // Force Color State to Pure Green (120° Hue, 100% Saturation, 100% Brightness)
+    PH_Color_Lamp_Color.sendCommand("120,100,100")
+
+    doorAlertTimer = createTimer(now.plusSeconds(3), [ |
+        logInfo("LabSecurity", "Door alert teardown window hit. Reverting Hue to standard state.")
+        PH_Color_Lamp_Color.sendCommand(lastStableColor)
+        doorAlertTimer = null
+    ])
+
+    // Ensure baseline visibility if the room is dark
     if (Lab_Ikea_Master.state == OFF && Lab_Hue_Master.state == OFF) {
         Lab_Ikea_Master.sendCommand(ON)
         Lab_Hue_Master.sendCommand(ON)
