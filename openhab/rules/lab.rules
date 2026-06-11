@@ -1,0 +1,161 @@
+// =============================================================================
+// Global State & Threshold Definitions
+// =============================================================================
+var Timer alertTimer = null
+var String lastStableColor = "0,0,100" // Defaults to Warm White
+
+val Double HUMIDITY_LOW_LIMIT = 40.0
+val Double HUMIDITY_HIGH_LIMIT = 65.0
+
+// =============================================================================
+// Core System & Presentation Handlers
+// =============================================================================
+
+rule "Laboratory Presence Event Handler"
+when
+    Item Lab_Motion_Sensor changed to ON
+then
+    logInfo("LabAutomation", "Motion detected! Initiating high-priority visual alert.")
+
+    if (alertTimer === null) {
+        lastStableColor = PH_Color_Lamp_Color.state.toString
+    } else {
+        alertTimer.cancel()
+        alertTimer = null
+    }
+
+    // Force Color State to Pure Red (0° Hue, 100% Saturation, 100% Brightness)
+    PH_Color_Lamp_Color.sendCommand("0,100,100")
+
+    alertTimer = createTimer(now.plusSeconds(3), [ |
+        logInfo("LabAutomation", "Teardown window hit. Reverting Hue to standard state.")
+        PH_Color_Lamp_Color.sendCommand(lastStableColor)
+        alertTimer = null
+    ])
+end
+
+rule "Laboratory Climate Matrix Handler"
+when
+    Item Lab_ESP8266_Hum changed
+then
+    val currentHum = (Lab_ESP8266_Hum.state as Number).doubleValue
+    var String targetColor = ""
+
+    if (currentHum < HUMIDITY_LOW_LIMIT) {
+        logWarn("LabAutomation", "Humidity low exception registered ({}%). Overriding color profile to Magenta.", currentHum)
+        targetColor = "300,100,100" // Pink / Magenta
+    } else if (currentHum > HUMIDITY_HIGH_LIMIT) {
+        logWarn("LabAutomation", "Humidity high exception registered ({}%). Overriding color profile to Ice Blue.", currentHum)
+        targetColor = "200,100,100" // Light Blue / Cyan
+    }
+
+    if (targetColor != "") {
+        if (alertTimer === null) {
+            lastStableColor = PH_Color_Lamp_Color.state.toString
+        } else {
+            alertTimer.cancel()
+            alertTimer = null
+        }
+
+        PH_Color_Lamp_Color.sendCommand(targetColor)
+
+        alertTimer = createTimer(now.plusSeconds(3), [ |
+            PH_Color_Lamp_Color.sendCommand(lastStableColor)
+            alertTimer = null
+        ])
+    }
+end
+
+rule "Aeotec WallMote Matrix Mapping Switch"
+when
+    Item Lab_WallMote_Scene changed
+then
+    val sceneNum = Lab_WallMote_Scene.state as Number
+    logInfo("LabAutomation", "Central Scene event frame caught from WallMote: {}", sceneNum)
+
+    switch (sceneNum) {
+        // Button 1 (Top Left): Toggle IKEA Light
+        case 1.0: {
+            val nextState = if (White_Lamp_Power.state == ON) OFF else ON
+            Lab_Ikea_Master.sendCommand(nextState)
+            White_Lamp_Power.sendCommand(nextState)
+        }
+        // Button 2 (Top Right): Toggle Hue Color Lamp
+        case 2.0: {
+            val nextState = if (PH_Color_Lamp_Power.state == ON) OFF else ON
+            PH_Color_Lamp_Power.sendCommand(nextState)
+            Lab_Hue_Master.sendCommand(ON) // Ensure room group is active
+        }
+        // Button 3 (Bottom Left): Toggle Hue White Lamp
+        case 3.0: {
+            val nextState = if (PH_White_Lamp_Power.state == ON) OFF else ON
+            PH_White_Lamp_Power.sendCommand(nextState)
+            Lab_Hue_Master.sendCommand(ON) // Ensure room group is active
+        }
+        // Button 4 (Bottom Right): Master ALL Lights Toggle
+        case 4.0: {
+            // Logic: If any individual light is ON, turn everything OFF. Otherwise, turn everything ON.
+            val anyOn = (White_Lamp_Power.state == ON || PH_Color_Lamp_Power.state == ON || PH_White_Lamp_Power.state == ON)
+            val masterState = if (anyOn) OFF else ON
+            
+            logInfo("LabAutomation", "Master Light Toggle triggered via Button 4. Setting all lights to: {}", masterState)
+            
+            Lab_Ikea_Master.sendCommand(masterState)
+            White_Lamp_Power.sendCommand(masterState)
+            Lab_Hue_Master.sendCommand(masterState)
+            PH_Color_Lamp_Power.sendCommand(masterState)
+            PH_White_Lamp_Power.sendCommand(masterState)
+        }
+    }
+end
+
+// =============================================================================
+// Advanced Architectural Behaviors
+// =============================================================================
+
+rule "Grid Demand Response Trigger"
+when
+    Item Lab_Plug_Watts changed
+then
+    val currentDraw = (Lab_Plug_Watts.state as Number).doubleValue
+    
+    // Threshold set to 1000W - Adjust depending on your presentation prop
+    if (currentDraw > 1000.0) {
+        logWarn("LabEnergy", "High power draw detected: {} W. Initiating load shedding.", currentDraw)
+        
+        if (White_Lamp_Dimmer.state > 30) White_Lamp_Dimmer.sendCommand(30)
+        if (PH_White_Lamp_Dimmer.state > 30) PH_White_Lamp_Dimmer.sendCommand(30)
+    }
+end
+
+rule "Thermal Lighting Matrix Adjustment"
+when
+    Item Lab_ESP8266_Temp changed
+then
+    val currentTemp = (Lab_ESP8266_Temp.state as Number).doubleValue
+    
+    if (currentTemp > 26.0) {
+        logInfo("LabEnvironment", "Thermal threshold exceeded ({} °C). Shifting to Cool White.", currentTemp)
+        // HSB String: 210° Hue (Slight Blue), 15% Saturation, 100% Brightness
+        PH_Color_Lamp_Color.sendCommand("210,15,100") 
+    } else if (currentTemp < 22.0) {
+        logInfo("LabEnvironment", "Thermal baseline low ({} °C). Shifting to Warm White.", currentTemp)
+        // HSB String: 40° Hue (Warm Yellow), 60% Saturation, 100% Brightness
+        PH_Color_Lamp_Color.sendCommand("40,60,100")
+    }
+end
+
+rule "Perimeter Door Activation Matrix"
+when
+    Item Lab_Door_Sensor changed to OPEN
+then
+    logInfo("LabSecurity", "Perimeter breach detected at Main Door.")
+    
+    if (Lab_Ikea_Master.state == OFF && Lab_Hue_Master.state == OFF) {
+        Lab_Ikea_Master.sendCommand(ON)
+        Lab_Hue_Master.sendCommand(ON)
+        
+        White_Lamp_Dimmer.sendCommand(100)
+        PH_White_Lamp_Dimmer.sendCommand(100)
+    }
+end

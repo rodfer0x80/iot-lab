@@ -1,0 +1,8 @@
+Strategies {
+    everyMinute : "0 * * * * ?"
+    default = everyChange
+}
+Items {
+    // RRD4j requires data to be saved every single minute to draw charts properly
+    Lab_ESP8266_Temp, Lab_ESP8266_Hum, Lab_Plug_Watts : strategy = everyMinute, everyChange
+}

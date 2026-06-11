@@ -1,18 +1,53 @@
-// The Room Location
-Group gLabRoom "Laboratory" <room> ["Room"]
+// =============================================================================
+// The Physical Locations (Semantic Model)
+// =============================================================================
+Group gLabRoom "IoT Master Laboratory" <room> ["Room"]
 
-// The Equipment Container
-Group gLabLights "Lab Lights Container" <light> (gLabRoom) ["Lightbulb"]
+// =============================================================================
+// The Equipment Blocks (Semantic Equipment Groups)
+// =============================================================================
+Group gLabIkeaLights "Lab IKEA Lights" <light> (gLabRoom) ["Equipment"]
+Group gLabHueLights   "Lab Hue Lights"  <light> (gLabRoom) ["Equipment"]
+Group gLabClimate     "Lab Climate Array" <temperature> (gLabRoom) ["Sensor"]
+Group gLabSecurity    "Lab Security Array" <shield> (gLabRoom) ["Equipment"]
+Group gLabSmartPlug   "Lab Smart Outlet" <whitegood> (gLabRoom) ["PowerOutlet"]
 
-// Master Switch (Inside the Container)
-Switch Lab_Master_Switch "Master Lab Switch" <switch> (gLabLights) ["Switch", "Power"] { channel="hue:room:ecb5fafffe067ba7:f611fdb8-b02a-4cc8-a89a-d035d690bcc4:brightness" }
+// =============================================================================
+// Actuators & Lighting
+// =============================================================================
+Switch Lab_Ikea_Master "Master IKEA Switch" <switch> (gLabIkeaLights) ["Switch", "Power"] { channel="deconz:lightgroup:deconzGW:IKEA_ROOM:switch" }
+Switch Lab_Hue_Master "Master Hue Switch" <switch> (gLabHueLights) ["Switch", "Power"] { channel="hue:room:ecb5fafffe067ba7:f611fdb8-b02a-4cc8-a89a-d035d690bcc4:brightness" }
 
-// White Lamp
-Switch White_Lamp_Power "White Lamp Power" <switch> (gLabLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
-Dimmer White_Lamp_Dimmer "White Brightness [%d %%]" <slider> (gLabLights) ["Control", "Light"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
+// Philips Hue Color Lamp (Primary Actuator for Rules)
+Switch PH_Color_Lamp_Power "PH Color Lamp Power" <switch> (gLabHueLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
+Dimmer PH_Color_Lamp_Dimmer "PH Color Brightness [%d %%]" <slider> (gLabHueLights) ["Control", "Light"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
+Color  PH_Color_Lamp_Color  "PH Lamp Color" <colorpicker> (gLabHueLights) ["Control", "Color"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
+Dimmer PH_Color_Lamp_Temp "PH White Temperature" <heating> (gLabHueLights) ["Control", "ColorTemperature"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color-temperature" }
 
-// Color Lamp
-Switch Color_Lamp_Power "Color Lamp Power" <switch> (gLabLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
-Dimmer Color_Lamp_Dimmer "Color Brightness [%d %%]" <slider> (gLabLights) ["Control", "Light"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
-Color Color_Lamp_Color "Lamp Color" <colorpicker> (gLabLights) ["Control", "Color"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color" }
-Dimmer Color_Lamp_Temp "White Temperature" <heating> (gLabLights) ["Control", "ColorTemperature"] { channel="hue:device:ecb5fafffe067ba7:18e9ad07-1504-490a-92b0-14a8bac10cc4:color-temperature" }
+// Philips Hue White Lamp & IKEA Lamp
+Switch PH_White_Lamp_Power "PH White Lamp Power" <switch> (gLabHueLights) ["Switch", "Power"] { channel="hue:device:ecb5fafffe067ba7:a0fb8028-2ccc-4c2b-97e4-8301301e0e32:brightness" }
+Switch White_Lamp_Power "White Lamp Power" <switch> (gLabIkeaLights) ["Switch", "Power"] { channel="deconz:dimmablelight:deconzGW:IKEA_LAMP:brightness" }
+
+// =============================================================================
+// Custom Microcontrollers & Telemetry (ESP8266 + Sensors)
+// =============================================================================
+// Telemetry Parsing from JSON string: {"temperature": X, "humidity": Y}
+Number:Temperature Lab_ESP8266_Temp "Lab Node Temperature [%.1f °C]" <temperature> (gLabClimate) ["Measurement", "Temperature"] { channel="mqtt:topic:01c825a61b:temp" }
+Number Lab_ESP8266_Hum "Lab Node Humidity [%.1f %%]" <humidity> (gLabClimate) ["Measurement", "Humidity"] { channel="mqtt:topic:01c825a61b:hum" }
+
+// Z-Wave Sensors
+Contact Lab_Door_Sensor "Lab Main Door Status [%s]" <door> (gLabSecurity) ["OpenClose", "Opening"] { channel="zwave:device:ZSTICK:node3:sensor_binary" }
+Number:Temperature Lab_Door_Temp "Lab Door Area Temperature [%.1f °C]" <temperature> (gLabClimate) ["Measurement", "Temperature"] { channel="zwave:device:ZSTICK:node3:sensor_temperature" }
+Switch Lab_Motion_Sensor "Lab Motion Detection [%s]" <motion> (gLabSecurity) ["Status", "Presence"] { channel="zwave:device:ZSTICK:node2:sensor_binary" }
+
+// =============================================================================
+// Input Vectors (Aeotec WallMote Quad)
+// =============================================================================
+Number Lab_WallMote_Scene "WallMote Control Vector [%d]" <wallswitch> (gLabRoom) { channel="zwave:device:ZSTICK:node4:scene_number" }
+
+// =============================================================================
+// Smart Infrastructure & Power Telemetry (TP-Link HS110)
+// =============================================================================
+Switch Lab_Plug_Power "Smart Plug Relay" <switch> (gLabSmartPlug) ["Switch", "Power"] { channel="tplinksmarthome:hs110:8041AD:switch" }
+Number:Power Lab_Plug_Watts "Smart Plug Load [%.1f W]" <energy> (gLabSmartPlug) ["Measurement", "Power"] { channel="tplinksmarthome:hs110:8041AD:power" }
+Number:Energy Lab_Plug_KWh "Smart Plug Accumulation [%.2f kWh]" <energy> (gLabSmartPlug) ["Measurement", "Energy"] { channel="tplinksmarthome:hs110:8041AD:energyUsage" }
